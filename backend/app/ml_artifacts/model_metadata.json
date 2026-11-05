@@ -1,0 +1,97 @@
+{
+  "dataset": "Pima Indians Diabetes Benchmark",
+  "total_samples": 768,
+  "positive_class_ratio": 0.349,
+  "selected_model": "Random Forest",
+  "features": [
+    "Pregnancies",
+    "Glucose",
+    "BloodPressure",
+    "SkinThickness",
+    "Insulin",
+    "BMI",
+    "DiabetesPedigreeFunction",
+    "Age",
+    "InsulinGlucoseRatio",
+    "BMIAgeInteraction",
+    "MAP_Proxy"
+  ],
+  "decision_threshold": 0.45,
+  "benchmark_comparison": {
+    "Logistic Regression": {
+      "accuracy": 0.7474,
+      "precision": 0.6057,
+      "recall_sensitivity": 0.791,
+      "specificity": 0.724,
+      "f1_score": 0.6861,
+      "roc_auc": 0.8371,
+      "pr_auc": 0.7097,
+      "confusion_matrix": {
+        "true_negatives": 362,
+        "false_positives": 138,
+        "false_negatives": 56,
+        "true_positives": 212
+      }
+    },
+    "Random Forest": {
+      "accuracy": 0.7396,
+      "precision": 0.5909,
+      "recall_sensitivity": 0.8246,
+      "specificity": 0.694,
+      "f1_score": 0.6885,
+      "roc_auc": 0.834,
+      "pr_auc": 0.6975,
+      "confusion_matrix": {
+        "true_negatives": 347,
+        "false_positives": 153,
+        "false_negatives": 47,
+        "true_positives": 221
+      }
+    },
+    "XGBoost": {
+      "accuracy": 0.7435,
+      "precision": 0.632,
+      "recall_sensitivity": 0.6343,
+      "specificity": 0.802,
+      "f1_score": 0.6331,
+      "roc_auc": 0.8237,
+      "pr_auc": 0.6851,
+      "confusion_matrix": {
+        "true_negatives": 401,
+        "false_positives": 99,
+        "false_negatives": 98,
+        "true_positives": 170
+      }
+    },
+    "Support Vector Machine": {
+      "accuracy": 0.7461,
+      "precision": 0.6318,
+      "recall_sensitivity": 0.653,
+      "specificity": 0.796,
+      "f1_score": 0.6422,
+      "roc_auc": 0.8204,
+      "pr_auc": 0.6744,
+      "confusion_matrix": {
+        "true_negatives": 398,
+        "false_positives": 102,
+        "false_negatives": 93,
+        "true_positives": 175
+      }
+    },
+    "LightGBM": {
+      "accuracy": 0.7422,
+      "precision": 0.6326,
+      "recall_sensitivity": 0.6231,
+      "specificity": 0.806,
+      "f1_score": 0.6278,
+      "roc_auc": 0.8206,
+      "pr_auc": 0.6719,
+      "confusion_matrix": {
+        "true_negatives": 403,
+        "false_positives": 97,
+        "false_negatives": 101,
+        "true_positives": 167
+      }
+    }
+  }
+}
