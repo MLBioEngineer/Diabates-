@@ -3,7 +3,7 @@ Patient Profile Model
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy import Column, String, Float, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from backend.app.core.database import Base
@@ -20,7 +20,7 @@ class PatientProfile(Base):
     baseline_weight_kg = Column(Float, nullable=True, default=70.0)
     diabetes_type = Column(String(50), default="NONE", nullable=False) # "NONE", "PRE_DIABETES", "TYPE_1", "TYPE_2", "GESTATIONAL"
     emergency_contact = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
     user = relationship("User", back_populates="patient_profile")

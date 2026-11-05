@@ -35,7 +35,7 @@ class SimulationEngine:
         Generates one telemetry reading at a specific timestamp.
         """
         if current_time is None:
-            current_time = datetime.now(timezone.utc)
+            current_time = datetime.utcnow()
 
         hour = current_time.hour + (current_time.minute / 60.0)
 
@@ -112,7 +112,7 @@ class SimulationEngine:
         """
         Generates a continuous time-series of readings for initial dashboard seeding.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
         start_time = now - timedelta(hours=hours)
         readings = []
         

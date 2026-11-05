@@ -3,7 +3,7 @@ Machine Learning Diabetes Risk Assessment Record Model
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy import Column, String, Float, DateTime, ForeignKey, JSON, Text
 from sqlalchemy.orm import relationship
 from backend.app.core.database import Base
@@ -14,7 +14,7 @@ class RiskAssessment(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     patient_id = Column(String(36), ForeignKey("patient_profiles.id", ondelete="CASCADE"), nullable=False, index=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     
     # Model Metadata
     model_name = Column(String(100), nullable=False)

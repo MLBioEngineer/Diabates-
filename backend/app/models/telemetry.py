@@ -3,7 +3,7 @@ Real-time Health Telemetry and Continuous Glucose Monitoring Model
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey, Index
 from sqlalchemy.orm import relationship
 from backend.app.core.database import Base
@@ -14,7 +14,7 @@ class TelemetryReading(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     patient_id = Column(String(36), ForeignKey("patient_profiles.id", ondelete="CASCADE"), nullable=False, index=True)
-    recorded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    recorded_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     
     # Blood Glucose
     glucose_mg_dl = Column(Float, nullable=False) # e.g. 110.5 mg/dL

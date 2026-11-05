@@ -3,7 +3,7 @@ User authentication and RBAC model
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy import Column, String, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from backend.app.core.database import Base
@@ -18,8 +18,8 @@ class User(Base):
     full_name = Column(String(255), nullable=False)
     role = Column(String(50), default="PATIENT", nullable=False) # "PATIENT", "DOCTOR", "ADMIN"
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     # Relationships
     patient_profile = relationship("PatientProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")

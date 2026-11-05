@@ -3,7 +3,7 @@ Health Alerts & Early Warnings Model
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy import Column, String, Float, Boolean, DateTime, ForeignKey, Index
 from sqlalchemy.orm import relationship
 from backend.app.core.database import Base
@@ -14,7 +14,7 @@ class HealthAlert(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     patient_id = Column(String(36), ForeignKey("patient_profiles.id", ondelete="CASCADE"), nullable=False, index=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     
     alert_level = Column(String(20), nullable=False) # "INFO", "WARNING", "CRITICAL"
     metric_type = Column(String(50), nullable=False) # "GLUCOSE_HYPO", "GLUCOSE_HYPER", "TACHYCARDIA", "HYPOXIA"
