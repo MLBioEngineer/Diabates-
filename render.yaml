@@ -5,11 +5,13 @@ services:
     region: oregon
     plan: free
     buildCommand: "pip install --upgrade pip && pip install -r backend/requirements.txt"
-    startCommand: "uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT"
+    startCommand: "python -m uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: PYTHONPATH
+        value: .
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL

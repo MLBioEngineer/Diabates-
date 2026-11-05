@@ -15,11 +15,16 @@ if db_url.startswith("postgres://"):
 elif db_url.startswith("postgresql://") and not db_url.startswith("postgresql+asyncpg://"):
     db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
+# Render managed postgres requires ssl/connection args or standard asyncpg connection
+connect_args = {}
+if "sqlite" in db_url:
+    connect_args = {"check_same_thread": False}
+
 engine = create_async_engine(
     db_url,
     echo=False,
     future=True,
-    connect_args={"check_same_thread": False} if "sqlite" in db_url else {}
+    connect_args=connect_args
 )
 
 AsyncSessionLocal = async_sessionmaker(
