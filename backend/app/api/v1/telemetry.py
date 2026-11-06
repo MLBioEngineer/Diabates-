@@ -55,7 +55,7 @@ async def get_telemetry_history(
     current_patient: PatientProfile = Depends(get_current_patient_profile),
     db: AsyncSession = Depends(get_db),
 ):
-    since = datetime.now(timezone.utc) - timedelta(hours=hours)
+    since = datetime.utcnow() - timedelta(hours=hours)
     query = (
         select(TelemetryReading)
         .where(TelemetryReading.patient_id == current_patient.id, TelemetryReading.recorded_at >= since)
@@ -93,7 +93,7 @@ async def trigger_simulated_reading(
     last_glucose = latest_obj.glucose_mg_dl if latest_obj else 105.0
 
     raw = simulation_engine.generate_single_reading(
-        current_time=datetime.now(timezone.utc),
+        current_time=datetime.utcnow(),
         last_glucose=last_glucose,
         event_override=event_override,
     )

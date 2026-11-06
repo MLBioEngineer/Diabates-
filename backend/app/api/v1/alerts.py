@@ -63,7 +63,7 @@ async def acknowledge_alert(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found")
 
     alert.is_acknowledged = True
-    alert.acknowledged_at = datetime.now(timezone.utc)
+    alert.acknowledged_at = datetime.utcnow()
     await db.commit()
     await db.refresh(alert)
     return AlertOut.model_validate(alert)

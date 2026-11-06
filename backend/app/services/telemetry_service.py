@@ -18,7 +18,7 @@ class TelemetryService:
 
     @staticmethod
     async def record_telemetry(db: AsyncSession, patient_id: str, data: TelemetryCreate) -> Tuple[TelemetryReading, List[HealthAlert]]:
-        timestamp = data.recorded_at or datetime.now(timezone.utc)
+        timestamp = data.recorded_at or datetime.utcnow()
         
         reading = TelemetryReading(
             patient_id=patient_id,
@@ -124,7 +124,7 @@ class TelemetryService:
 
     @staticmethod
     async def get_patient_statistics(db: AsyncSession, patient_id: str, hours: int = 24) -> TelemetryStatsOut:
-        since_time = datetime.now(timezone.utc) - timedelta(hours=hours)
+        since_time = datetime.utcnow() - timedelta(hours=hours)
         
         query = (
             select(TelemetryReading)

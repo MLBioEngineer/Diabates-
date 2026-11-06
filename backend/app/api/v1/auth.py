@@ -40,6 +40,27 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     if user_role == "PATIENT":
         patient_profile = PatientProfile(user_id=new_user.id)
         db.add(patient_profile)
+        await db.flush()
+
+        # Seed initial 24 hours of telemetry for newly registered patient
+        from backend.app.services.simulation_service import simulation_engine
+        from backend.app.models.telemetry import TelemetryReading
+        initial_series = simulation_engine.generate_historical_series(hours=24, interval_minutes=15)
+        for s in initial_series:
+            r = TelemetryReading(
+                patient_id=patient_profile.id,
+                recorded_at=s["recorded_at"],
+                glucose_mg_dl=s["glucose_mg_dl"],
+                glucose_trend_velocity=s["glucose_trend_velocity"],
+                heart_rate_bpm=s["heart_rate_bpm"],
+                blood_pressure_systolic=s["blood_pressure_systolic"],
+                blood_pressure_diastolic=s["blood_pressure_diastolic"],
+                body_temperature_c=s["body_temperature_c"],
+                spo2_percentage=s["spo2_percentage"],
+                physical_activity_steps=s["physical_activity_steps"],
+                provenance="SIMULATED",
+            )
+            db.add(r)
     elif user_role == "DOCTOR":
         doctor_profile = DoctorProfile(user_id=new_user.id)
         db.add(doctor_profile)

@@ -89,7 +89,7 @@ async def get_clinical_health_report(
 
     return HealthReportOut(
         report_id=f"REP-{uuid.uuid4().hex[:8].upper()}",
-        generated_at=datetime.now(timezone.utc),
+        generated_at=datetime.utcnow(),
         patient_name=current_user.full_name,
         patient_id=current_patient.id,
         diabetes_type=current_patient.diabetes_type,
