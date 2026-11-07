@@ -14,7 +14,7 @@ import {
   Cpu,
   RefreshCw
 } from 'lucide-react';
-import { getResearchReport, getParticipants, getExportCsvUrl } from '@/lib/api';
+import { getResearchReport, getParticipants, getExportCsvUrl, downloadClientSideCsv } from '@/lib/api';
 import { ResearchReport, Participant } from '@/lib/types';
 
 export default function ReportsPage() {
@@ -50,6 +50,14 @@ export default function ReportsPage() {
   const handleParticipantChange = (id: string) => {
     setSelectedSubId(id);
     loadData(id);
+  };
+
+  const handleDownloadCsv = () => {
+    if (report) {
+      downloadClientSideCsv(report);
+    } else {
+      window.open(getExportCsvUrl(), '_blank');
+    }
   };
 
   const handlePrint = () => {
@@ -90,15 +98,13 @@ export default function ReportsPage() {
           </select>
 
           {/* Export CSV */}
-          <a
-            href={getExportCsvUrl()}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors"
+          <button
+            onClick={handleDownloadCsv}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Download CSV (R/SPSS)</span>
-          </a>
+          </button>
 
           {/* Print Report */}
           <button

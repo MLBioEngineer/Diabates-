@@ -104,7 +104,7 @@ export interface FeatureImpact {
   feature_label: string;
   feature_value: string;
   voltage_impact_v: number;
-  description: str;
+  description: string;
 }
 
 export interface VPTEstimationInput {
