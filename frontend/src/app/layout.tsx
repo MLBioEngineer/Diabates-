@@ -4,8 +4,8 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 
 export const metadata: Metadata = {
-  title: 'GlycoPulse AI | Diabetes Prediction & Continuous Health Monitoring',
-  description: 'AI-Powered Diabetes Risk Prediction, Continuous Glucose Monitoring (CGM) Telemetry, and Clinical Decision Support Platform.',
+  title: 'VPT Sense AI | Vibration Perception Threshold Research Platform',
+  description: 'Quantitative Sensory Testing (QST), Biothesiometry Calibration, and Peripheral Neuropathy Research Platform.',
 };
 
 export default function RootLayout({

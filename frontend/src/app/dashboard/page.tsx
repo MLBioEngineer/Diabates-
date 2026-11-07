@@ -3,58 +3,44 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
+  Users,
   Activity,
-  Heart,
-  Droplet,
-  Wind,
-  Footprints,
   AlertTriangle,
-  ArrowRight,
-  RefreshCw,
-  TrendingUp,
-  TrendingDown,
-  Minus,
+  ArrowUpRight,
   Sparkles,
-  ShieldCheck,
+  Radio,
+  FileText,
+  Sliders,
+  ShieldAlert,
   CheckCircle2,
-  Utensils,
-  Dumbbell
+  ChevronRight,
+  TrendingUp,
+  RefreshCw
 } from 'lucide-react';
-import {
-  getTelemetryHistory,
-  getTelemetryStatistics,
-  getActiveAlerts,
-  acknowledgeAlert,
-  triggerSimulatedReading,
-  seedSampleHistory
-} from '@/lib/api';
-import { TelemetryReading, TelemetryStatistics, HealthAlert } from '@/lib/types';
-import { GlucoseTrendChart } from '@/components/charts/GlucoseTrendChart';
-import { TimeInRangeDonut } from '@/components/charts/TimeInRangeDonut';
-import { ProvenanceBadge } from '@/components/telemetry/ProvenanceBadge';
+import { getAnalyticsOverview, getParticipants, getVPTAlerts, acknowledgeVPTAlert } from '@/lib/api';
+import { CohortAnalytics, Participant, VPTAlert } from '@/lib/types';
+import { SeverityDistributionDonut } from '@/components/charts/SeverityDistributionDonut';
+import { SiteComparisonBarChart } from '@/components/charts/SiteComparisonBarChart';
 
-export default function PatientDashboard() {
-  const [history, setHistory] = useState<TelemetryReading[]>([]);
-  const [stats, setStats] = useState<TelemetryStatistics | null>(null);
-  const [alerts, setAlerts] = useState<HealthAlert[]>([]);
+export default function DashboardPage() {
+  const [analytics, setAnalytics] = useState<CohortAnalytics | null>(null);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [alerts, setAlerts] = useState<VPTAlert[]>([]);
   const [loading, setLoading] = useState(true);
-  const [simulating, setSimulating] = useState(false);
 
   const loadData = async () => {
+    setLoading(true);
     try {
-      // 1. Seed initial data if newly registered user
-      await seedSampleHistory(24).catch(() => {});
-      
-      const [histData, statsData, alertsData] = await Promise.all([
-        getTelemetryHistory(24),
-        getTelemetryStatistics(24),
-        getActiveAlerts(),
+      const [anData, pList, altList] = await Promise.all([
+        getAnalyticsOverview(),
+        getParticipants(),
+        getVPTAlerts(),
       ]);
-      setHistory(histData);
-      setStats(statsData);
-      setAlerts(alertsData);
+      setAnalytics(anData);
+      setParticipants(pList);
+      setAlerts(altList);
     } catch (err) {
-      console.error('Failed to load dashboard data:', err);
+      console.error('Error loading dashboard data:', err);
     } finally {
       setLoading(false);
     }
@@ -62,326 +48,295 @@ export default function PatientDashboard() {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 20000); // 20s auto poll fallback
-    return () => clearInterval(interval);
   }, []);
 
-  const handleSimulate = async (override?: string) => {
-    setSimulating(true);
-    try {
-      const newReading = await triggerSimulatedReading(override);
-      setHistory((prev) => [...prev, newReading]);
-      // refresh stats and alerts
-      const [newStats, newAlerts] = await Promise.all([
-        getTelemetryStatistics(24),
-        getActiveAlerts(),
-      ]);
-      setStats(newStats);
-      setAlerts(newAlerts);
-    } catch (err) {
-      console.error('Simulation error:', err);
-    } finally {
-      setSimulating(false);
-    }
-  };
-
   const handleAckAlert = async (id: string) => {
-    try {
-      await acknowledgeAlert(id);
-      setAlerts((prev) => prev.filter((a) => a.id !== id));
-    } catch (err) {
-      console.error('Alert acknowledgment error:', err);
-    }
+    await acknowledgeVPTAlert(id);
+    setAlerts((prev) => prev.filter((a) => a.id !== id));
   };
-
-  const latest = stats?.latest_reading || (history.length > 0 ? history[history.length - 1] : null);
-
-  // Glucose state determination
-  let glucoseStatus = { label: 'Optimal Range', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800' };
-  if (latest) {
-    if (latest.glucose_mg_dl < 70) {
-      glucoseStatus = { label: 'Hypoglycemia Warning', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800' };
-    } else if (latest.glucose_mg_dl > 180) {
-      glucoseStatus = { label: 'Hyperglycemia Warning', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800' };
-    }
-  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Top Header */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Patient Telemetry Dashboard
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-50 dark:bg-cyan-950/60 text-cyan-700 dark:text-cyan-300 text-xs font-semibold">
+            <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+            Clinical Study Console &middot; Protocol QST-2026
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight mt-1">
+            VPT Research Dashboard
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Continuous glucose monitoring, vital parameters, and glycemic stability indicators
+          <p className="text-xs text-slate-500 mt-0.5">
+            Real-time cohort quantitative sensory testing metrics, biothesiometry trials, and neuropathy staging
           </p>
         </div>
 
-        {/* Live Simulation Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <button
-            onClick={() => handleSimulate()}
-            disabled={simulating}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 transition-all shadow-sm"
+            onClick={loadData}
+            disabled={loading}
+            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 transition-colors"
+            title="Refresh Data"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${simulating ? 'animate-spin' : ''}`} />
-            Push Reading
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <button
-            onClick={() => handleSimulate('MEAL')}
-            disabled={simulating}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 transition-colors"
-            title="Simulate Postprandial Glucose Rise"
+
+          <Link
+            href="/live-monitoring"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold shadow-md shadow-cyan-600/20 transition-all hover:scale-[1.02]"
           >
-            <Utensils className="w-3.5 h-3.5" />
-            + Meal Spike
-          </button>
-          <button
-            onClick={() => handleSimulate('EXERCISE')}
-            disabled={simulating}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition-colors"
-            title="Simulate Exercise Exertion Drop"
+            <Radio className="w-4 h-4" />
+            <span>Launch Live Test</span>
+          </Link>
+
+          <Link
+            href="/reference-estimation"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 text-xs font-bold transition-all shadow-sm"
           >
-            <Dumbbell className="w-3.5 h-3.5" />
-            + Exercise
-          </button>
+            <Sparkles className="w-4 h-4 text-cyan-400 dark:text-cyan-600" />
+            <span>Reference Estimator</span>
+          </Link>
         </div>
       </div>
 
-      {/* Critical Early Warning Alerts Banner */}
-      {alerts.length > 0 && (
-        <div className="space-y-2">
-          {alerts.map((alert) => (
-            <div
-              key={alert.id}
-              className={`p-4 rounded-xl border flex items-center justify-between gap-4 transition-all ${
-                alert.alert_level === 'CRITICAL'
-                  ? 'bg-rose-50 dark:bg-rose-950/50 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200'
-                  : 'bg-amber-50 dark:bg-amber-950/50 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 shrink-0" />
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider">{alert.alert_level} ALERT</p>
-                  <p className="text-xs">{alert.message}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => handleAckAlert(alert.id)}
-                className="shrink-0 px-3 py-1 text-xs font-semibold rounded-lg bg-white/80 dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 hover:bg-white transition-all shadow-sm text-slate-800 dark:text-slate-200"
-              >
-                Acknowledge
-              </button>
+      {/* Top Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Subjects */}
+        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+          <div className="flex items-center justify-between text-slate-500">
+            <span className="text-xs font-bold uppercase tracking-wider">Enrolled Subjects</span>
+            <div className="p-2 rounded-lg bg-cyan-50 dark:bg-cyan-950/60 text-cyan-600">
+              <Users className="w-4 h-4" />
             </div>
-          ))}
+          </div>
+          <div className="text-3xl font-black text-slate-900 dark:text-white">
+            {analytics?.total_subjects ?? participants.length}
+          </div>
+          <p className="text-[11px] text-slate-400">
+            {analytics?.total_sessions ?? 0} completed QST sessions
+          </p>
+        </div>
+
+        {/* Mean Cohort VPT */}
+        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+          <div className="flex items-center justify-between text-slate-500">
+            <span className="text-xs font-bold uppercase tracking-wider">Mean Cohort VPT</span>
+            <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600">
+              <Activity className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-3xl font-black text-slate-900 dark:text-white">
+            {analytics?.mean_cohort_vpt_v ?? 14.2} <span className="text-sm font-normal text-slate-400">V</span>
+          </div>
+          <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+            <TrendingUp className="w-3.5 h-3.5" />
+            Hallux distal phalanx reference
+          </p>
+        </div>
+
+        {/* Bilateral Asymmetry */}
+        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+          <div className="flex items-center justify-between text-slate-500">
+            <span className="text-xs font-bold uppercase tracking-wider">Bilateral Asymmetry</span>
+            <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600">
+              <Sliders className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-3xl font-black text-slate-900 dark:text-white">
+            {analytics?.mean_bilateral_asymmetry_v ?? 1.8} <span className="text-sm font-normal text-slate-400">V</span>
+          </div>
+          <p className="text-[11px] text-slate-400">
+            Alert trigger cutoff: &gt; 5.0 V discrepancy
+          </p>
+        </div>
+
+        {/* Active Neuropathy Alerts */}
+        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+          <div className="flex items-center justify-between text-slate-500">
+            <span className="text-xs font-bold uppercase tracking-wider">Critical Alerts</span>
+            <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-3xl font-black text-rose-600 dark:text-rose-400">
+            {alerts.length}
+          </div>
+          <p className="text-[11px] text-slate-400">
+            {alerts.filter(a => a.alert_level === 'CRITICAL').length} severe LOPS (≥25V)
+          </p>
+        </div>
+      </div>
+
+      {/* Critical Alerts Banner (if any) */}
+      {alerts.length > 0 && (
+        <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 space-y-3">
+          <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-bold text-xs uppercase tracking-wider">
+            <ShieldAlert className="w-4 h-4 text-rose-600" />
+            Active Quantitative Sensory Alerts ({alerts.length})
+          </div>
+          <div className="space-y-2">
+            {alerts.slice(0, 3).map((alt) => (
+              <div
+                key={alt.id}
+                className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-rose-100 dark:border-rose-950 text-xs shadow-sm"
+              >
+                <div>
+                  <span className="font-bold text-rose-700 dark:text-rose-400 mr-2">
+                    [{alt.alert_type}]
+                  </span>
+                  <span className="text-slate-700 dark:text-slate-300">{alt.message}</span>
+                </div>
+                <button
+                  onClick={() => handleAckAlert(alt.id)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-[11px] font-semibold text-slate-600 dark:text-slate-300"
+                >
+                  Acknowledge
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Primary Vital Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Glucose Main Card */}
-        <div className={`p-5 rounded-2xl border ${glucoseStatus.bg} shadow-sm space-y-3`}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-              <Droplet className="w-4 h-4 text-teal-600" />
-              Blood Glucose
-            </span>
-            {latest && <ProvenanceBadge provenance={latest.provenance} size="sm" />}
-          </div>
-
-          <div className="flex items-baseline justify-between">
-            <div>
-              <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
-                {latest ? latest.glucose_mg_dl : '--'}
-              </span>
-              <span className="text-xs text-slate-500 ml-1.5">mg/dL</span>
-            </div>
-            {latest && (
-              <span className={`text-xs font-bold flex items-center gap-1 ${glucoseStatus.color}`}>
-                {latest.glucose_trend_velocity > 0.5 ? (
-                  <TrendingUp className="w-4 h-4" />
-                ) : latest.glucose_trend_velocity < -0.5 ? (
-                  <TrendingDown className="w-4 h-4" />
-                ) : (
-                  <Minus className="w-4 h-4" />
-                )}
-                {latest.glucose_trend_velocity > 0 ? '+' : ''}
-                {latest.glucose_trend_velocity} mg/dL/min
-              </span>
-            )}
-          </div>
-
-          <div className="text-[11px] text-slate-500 flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-800/60">
-            <span>Status: <strong className={glucoseStatus.color}>{glucoseStatus.label}</strong></span>
-            <span>Target: 70–180</span>
-          </div>
-        </div>
-
-        {/* Heart Rate */}
-        <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
-            <span className="flex items-center gap-1.5">
-              <Heart className="w-4 h-4 text-rose-500" />
-              Heart Rate
-            </span>
-            <span className="text-[10px] text-slate-400 font-normal">Resting</span>
-          </div>
-          <div>
-            <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
-              {latest?.heart_rate_bpm || 72}
-            </span>
-            <span className="text-xs text-slate-500 ml-1.5">BPM</span>
-          </div>
-          <div className="text-[11px] text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800 flex justify-between">
-            <span>Normal: 60-100</span>
-            <span className="text-emerald-600 font-semibold">Normal Sinus</span>
-          </div>
-        </div>
-
-        {/* Blood Pressure */}
-        <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
-            <span className="flex items-center gap-1.5">
-              <Activity className="w-4 h-4 text-blue-500" />
-              Blood Pressure
-            </span>
-            <span className="text-[10px] text-slate-400 font-normal">Sys / Dia</span>
-          </div>
-          <div>
-            <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
-              {latest ? `${latest.blood_pressure_systolic}/${latest.blood_pressure_diastolic}` : '120/80'}
-            </span>
-            <span className="text-xs text-slate-500 ml-1.5">mm Hg</span>
-          </div>
-          <div className="text-[11px] text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800 flex justify-between">
-            <span>Target: &lt;120/80</span>
-            <span className="text-emerald-600 font-semibold">Pre-hypertension</span>
-          </div>
-        </div>
-
-        {/* SpO2 & Steps */}
-        <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
-            <span className="flex items-center gap-1.5">
-              <Wind className="w-4 h-4 text-cyan-500" />
-              Pulse Oxygen (SpO2)
-            </span>
-            <span className="text-[10px] text-slate-400 font-normal">Oxygenation</span>
-          </div>
-          <div>
-            <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
-              {latest?.spo2_percentage || 98.2}%
-            </span>
-            <span className="text-xs text-slate-500 ml-2">
-              • {latest?.physical_activity_steps || 0} steps
-            </span>
-          </div>
-          <div className="text-[11px] text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800 flex justify-between">
-            <span>Normal: &gt;95%</span>
-            <span className="text-emerald-600 font-semibold">Adequate</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Continuous Glucose Monitoring Graph & Time-in-Range Donut */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Trend Graph */}
-        <div className="lg:col-span-2 p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+      {/* Chart Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Cohort Severity Distribution */}
+        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Continuous Glucose Profile (Last 24 Hours)
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                Cohort Neuropathy Stratification
               </h2>
-              <p className="text-xs text-slate-500">
-                Green shaded band denotes clinical target range (70 to 180 mg/dL)
-              </p>
+              <p className="text-xs text-slate-500">Distribution across international QST thresholds</p>
             </div>
-            <Link
-              href="/live-monitor"
-              className="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-1"
-            >
-              Expand Real-Time
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">
+              Biothesiometer Scale
+            </span>
           </div>
 
-          <GlucoseTrendChart data={history} height={320} />
+          <SeverityDistributionDonut
+            data={
+              analytics?.classification_breakdown ?? [
+                { name: 'Preserved (<15V)', value: 4, color: '#10B981' },
+                { name: 'Mild Blunting (15-19.9V)', value: 2, color: '#F59E0B' },
+                { name: 'Moderate (20-24.9V)', value: 2, color: '#F97316' },
+                { name: 'Severe LOPS (≥25V)', value: 1, color: '#EF4444' },
+              ]
+            }
+            height={220}
+          />
         </div>
 
-        {/* Time-in-Range (TIR) Summary */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 flex flex-col justify-between">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">
-              Glycemic Quality Indices
-            </h2>
-            <p className="text-xs text-slate-500">
-              International Consensus on Time-in-Range (TIR) metrics
-            </p>
+        {/* Site Comparison */}
+        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                Anatomical Site Sensitivity Comparison
+              </h2>
+              <p className="text-xs text-slate-500">Mean vibration perception threshold by anatomical site</p>
+            </div>
+            <span className="text-[11px] font-semibold text-cyan-600">Volts (RMS)</span>
           </div>
 
-          <TimeInRangeDonut
-            inRange={stats?.time_in_range_percent || 85}
-            belowRange={stats?.time_below_range_percent || 2}
-            aboveRange={stats?.time_above_range_percent || 13}
-            height={190}
+          <SiteComparisonBarChart
+            data={
+              analytics?.site_comparison ?? [
+                { site: 'Great Toe', voltage_v: 14.2 },
+                { site: '1st Metatarsal', voltage_v: 16.5 },
+                { site: 'Medial Malleolus', voltage_v: 12.8 },
+                { site: 'Index Finger', voltage_v: 4.8 },
+              ]
+            }
+            height={220}
           />
-
-          <div className="space-y-2 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
-            <div className="flex justify-between text-slate-600 dark:text-slate-400">
-              <span>Mean Interstitial Glucose:</span>
-              <strong className="text-slate-900 dark:text-white">{stats?.mean_glucose || 108} mg/dL</strong>
-            </div>
-            <div className="flex justify-between text-slate-600 dark:text-slate-400">
-              <span>Estimated HbA1c (GMI):</span>
-              <strong className="text-teal-600 dark:text-teal-400 font-bold">{stats?.glucose_management_indicator || 5.8}%</strong>
-            </div>
-            <div className="flex justify-between text-slate-600 dark:text-slate-400">
-              <span>Glycemic Variability (%CV):</span>
-              <strong className="text-slate-900 dark:text-white">{stats?.glycemic_variability_cv || 18.2}% (&lt;36% target)</strong>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Bottom Row: AI Risk Assessment Teaser & Clinical Reports Quick Link */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* ML Assessment Promo */}
-        <div className="p-6 rounded-2xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-950/40 dark:to-slate-900 border border-teal-200 dark:border-teal-800/60 shadow-sm space-y-3">
-          <div className="flex items-center gap-2 text-teal-700 dark:text-teal-300 font-bold text-sm">
-            <Sparkles className="w-4 h-4 text-teal-600" />
-            Machine Learning Diabetes Risk Assessment
+      {/* Participants Table */}
+      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+              Enrolled Research Participants
+            </h2>
+            <p className="text-xs text-slate-500">Quantitative Sensory Testing trial records and status</p>
           </div>
-          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-            Obtain an individualized, multi-parameter risk evaluation using our cross-validated Random Forest model with explainable SHAP feature attribution.
-          </p>
+
           <Link
-            href="/assessment"
-            className="inline-flex items-center gap-2 text-xs font-bold text-teal-700 dark:text-teal-300 hover:text-teal-800 pt-2"
+            href="/participants"
+            className="inline-flex items-center gap-1 text-xs font-bold text-cyan-600 hover:text-cyan-700"
           >
-            Launch Risk Assessment Engine
-            <ArrowRight className="w-3.5 h-3.5" />
+            <span>View All Subjects</span>
+            <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        {/* Reports & PDF Export */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-          <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
-            <ShieldCheck className="w-4 h-4 text-teal-600" />
-            Clinical Records & Data Export
-          </div>
-          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-            Generate comprehensive AGP (Ambulatory Glucose Profile) reports for your endocrinologist or export full CSV telemetry records.
-          </p>
-          <Link
-            href="/reports"
-            className="inline-flex items-center gap-2 text-xs font-bold text-teal-600 hover:text-teal-700 pt-2"
-          >
-            View Clinical Reports
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase tracking-wider text-[10px]">
+              <tr>
+                <th className="px-4 py-3 rounded-l-lg">Subject Code</th>
+                <th className="px-4 py-3">Participant Name</th>
+                <th className="px-4 py-3">Demographics</th>
+                <th className="px-4 py-3">Clinical Cohort</th>
+                <th className="px-4 py-3">Latest VPT (V)</th>
+                <th className="px-4 py-3">Sensory Classification</th>
+                <th className="px-4 py-3 rounded-r-lg">Ulcer Risk</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {participants.slice(0, 5).map((p) => {
+                let badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300';
+                if (p.latest_classification === 'SEVERE_LOPS') {
+                  badgeColor = 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300';
+                } else if (p.latest_classification === 'MODERATE_NEUROPATHY') {
+                  badgeColor = 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/60 dark:text-orange-300';
+                } else if (p.latest_classification === 'MILD_BLUNTING') {
+                  badgeColor = 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300';
+                }
+
+                return (
+                  <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="px-4 py-3 font-mono font-bold text-cyan-600 dark:text-cyan-400">
+                      {p.subject_code}
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">
+                      {p.full_name}
+                    </td>
+                    <td className="px-4 py-3 text-slate-500">
+                      {p.age}y &middot; {p.gender[0]} &middot; {p.height_cm}cm
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                      {p.clinical_group.replace(/_/g, ' ')}
+                    </td>
+                    <td className="px-4 py-3 font-mono font-bold text-slate-900 dark:text-white">
+                      {p.latest_vpt_voltage ? `${p.latest_vpt_voltage} V` : '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${badgeColor}`}>
+                        {p.latest_classification?.replace(/_/g, ' ') || 'NOT TESTED'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`text-[11px] font-bold ${
+                          p.ulcer_risk_category === 'CRITICAL'
+                            ? 'text-rose-600'
+                            : p.ulcer_risk_category === 'HIGH'
+                            ? 'text-orange-500'
+                            : 'text-slate-500'
+                        }`}
+                      >
+                        {p.ulcer_risk_category || 'LOW'}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

@@ -1,39 +1,56 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FileText,
-  Printer,
   Download,
+  Printer,
+  CheckCircle2,
+  AlertTriangle,
   ShieldCheck,
-  Activity,
-  AlertCircle,
-  BrainCircuit,
-  Info,
+  Building,
+  UserCheck,
   Calendar,
-  User
+  Cpu,
+  RefreshCw
 } from 'lucide-react';
-import { getHealthReport, getExportCsvUrl } from '@/lib/api';
-import { HealthReport } from '@/lib/types';
-import { TimeInRangeDonut } from '@/components/charts/TimeInRangeDonut';
+import { getResearchReport, getParticipants, getExportCsvUrl } from '@/lib/api';
+import { ResearchReport, Participant } from '@/lib/types';
 
 export default function ReportsPage() {
-  const [report, setReport] = useState<HealthReport | null>(null);
+  const [report, setReport] = useState<ResearchReport | null>(null);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [selectedSubId, setSelectedSubId] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchReport() {
-      try {
-        const data = await getHealthReport();
-        setReport(data);
-      } catch (err) {
-        console.error('Failed to load clinical report:', err);
-      } finally {
-        setLoading(false);
-      }
+  const loadData = async (subId?: string) => {
+    setLoading(true);
+    try {
+      const rep = await getResearchReport(subId);
+      setReport(rep);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
-    fetchReport();
+  };
+
+  useEffect(() => {
+    getParticipants().then((list) => {
+      setParticipants(list);
+      if (list.length > 0) {
+        setSelectedSubId(list[0].id);
+        loadData(list[0].id);
+      } else {
+        loadData();
+      }
+    });
   }, []);
+
+  const handleParticipantChange = (id: string) => {
+    setSelectedSubId(id);
+    loadData(id);
+  };
 
   const handlePrint = () => {
     if (typeof window !== 'undefined') {
@@ -41,201 +58,274 @@ export default function ReportsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-5xl mx-auto px-4 py-20 text-center text-slate-500 text-sm">
-        Compiling ambulatory glycemic metrics and generating clinical report...
-      </div>
-    );
-  }
-
-  if (!report) {
-    return (
-      <div className="max-w-5xl mx-auto px-4 py-20 text-center text-slate-500 text-sm">
-        Unable to load health report. Please verify connection to the backend.
-      </div>
-    );
-  }
-
-  const s = report.telemetry_statistics;
-
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 print:p-0">
-      {/* Action Bar (hidden in print) */}
-      <div className="flex items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800 print:hidden">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Action / Toolbar Header (Hidden during print) */}
+      <div className="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-            Clinical Health Summary &amp; Export
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-xs font-semibold">
+            <FileText className="w-3.5 h-3.5 text-purple-500" />
+            Standardized Clinical QST Trial Documentation
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight mt-1">
+            Research Reports & Export
           </h1>
-          <p className="text-xs text-slate-500">
-            Standardized Ambulatory Glucose Profile (AGP) report for patient consultations
+          <p className="text-xs text-slate-500 mt-0.5">
+            Publication-ready Quantitative Sensory Testing documentation, raw dataset export, and podiatric triage
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-all shadow-sm"
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Select Participant */}
+          <select
+            value={selectedSubId}
+            onChange={(e) => handleParticipantChange(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium"
           >
-            <Printer className="w-4 h-4" />
-            Print / Save PDF
-          </button>
+            {participants.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.subject_code} - {p.full_name}
+              </option>
+            ))}
+          </select>
+
+          {/* Export CSV */}
           <a
             href={getExportCsvUrl()}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-teal-600 text-white hover:bg-teal-700 transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors"
           >
-            <Download className="w-4 h-4" />
-            Download Raw CSV
+            <Download className="w-3.5 h-3.5" />
+            <span>Download CSV (R/SPSS)</span>
           </a>
+
+          {/* Print Report */}
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold shadow-md shadow-cyan-600/20 transition-all hover:scale-[1.02]"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Export PDF / Print</span>
+          </button>
         </div>
       </div>
 
-      {/* Printable Report Document Card */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 sm:p-12 shadow-xl space-y-8 print:shadow-none print:border-none print:p-0">
-        {/* Document Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center text-white font-bold text-sm">
-                GP
+      {/* Printable Clinical Report Paper */}
+      {report && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 sm:p-12 shadow-xl space-y-8 print:border-none print:shadow-none print:p-0">
+          {/* Document Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-slate-900 dark:border-white pb-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-cyan-600 flex items-center justify-center text-white font-black text-sm">
+                  VPT
+                </div>
+                <span className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                  VPT Sense AI &middot; Clinical Research Consortium
+                </span>
               </div>
-              <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                GlycoPulse AI Ambulatory Report
-              </h2>
+              <p className="text-xs text-slate-500 font-medium">
+                Quantitative Sensory Testing (QST) & Vibration Perception Threshold Report
+              </p>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Standardized Glycemic Quality Assessment &amp; Clinical Decision Support
-            </p>
+
+            <div className="text-left sm:text-right space-y-0.5 text-xs text-slate-500">
+              <p className="font-mono font-bold text-slate-900 dark:text-white">
+                REPORT #{report.report_id}
+              </p>
+              <p>Protocol: QST-IRB-2026-X8</p>
+              <p>Generated: {new Date(report.generated_at).toLocaleDateString()}</p>
+            </div>
           </div>
 
-          <div className="text-right text-xs text-slate-500 space-y-1">
-            <p><strong>Report ID:</strong> {report.report_id}</p>
-            <p><strong>Generated:</strong> {new Date(report.generated_at).toLocaleString()}</p>
-            <p><strong>Monitoring Period:</strong> {report.monitoring_period}</p>
-          </div>
-        </div>
+          {/* Subject Demographics Grid */}
+          <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 space-y-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Subject Profile & Medical Stratification
+            </span>
 
-        {/* Patient Demographics */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 text-xs">
-          <div>
-            <span className="text-slate-400 block text-[10px] uppercase font-bold">Patient Name</span>
-            <span className="font-semibold text-slate-900 dark:text-white">{report.patient_name}</span>
-          </div>
-          <div>
-            <span className="text-slate-400 block text-[10px] uppercase font-bold">Patient Identifier</span>
-            <span className="font-mono text-slate-700 dark:text-slate-300">{report.patient_id.slice(0, 13)}...</span>
-          </div>
-          <div>
-            <span className="text-slate-400 block text-[10px] uppercase font-bold">Diabetes Classification</span>
-            <span className="font-semibold text-teal-600 dark:text-teal-400">{report.diabetes_type}</span>
-          </div>
-          <div>
-            <span className="text-slate-400 block text-[10px] uppercase font-bold">Readings Analyzed</span>
-            <span className="font-semibold text-slate-900 dark:text-white">{s.readings_count} data points</span>
-          </div>
-        </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+              <div>
+                <span className="text-slate-400 block text-[10px]">Subject Code</span>
+                <span className="font-mono font-bold text-cyan-600 text-sm">{report.subject_code}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px]">Full Name</span>
+                <span className="font-bold text-slate-900 dark:text-white text-sm">{report.full_name}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px]">Demographics</span>
+                <span className="font-bold text-slate-900 dark:text-white">
+                  {report.age} yrs &middot; {report.gender} &middot; {report.height_cm} cm
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px]">Body Mass Index</span>
+                <span className="font-bold text-slate-900 dark:text-white">{report.bmi} kg/m²</span>
+              </div>
 
-        {/* Key AGP Metrics Table */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-            Consensus Glycemic Metrics (ADA / EASD Benchmark)
-          </h3>
+              <div>
+                <span className="text-slate-400 block text-[10px]">Clinical Cohort</span>
+                <span className="font-bold text-slate-900 dark:text-white">
+                  {report.clinical_group.replace(/_/g, ' ')}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px]">Diabetes Duration</span>
+                <span className="font-bold text-slate-900 dark:text-white">
+                  {report.diabetes_duration_years > 0 ? `${report.diabetes_duration_years} Years` : 'None'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px]">Ulcer History</span>
+                <span className={`font-bold ${report.foot_ulcer_history ? 'text-rose-600' : 'text-slate-600 dark:text-slate-300'}`}>
+                  {report.foot_ulcer_history ? 'Positive History' : 'Negative'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px]">Instrument</span>
+                <span className="font-bold text-slate-900 dark:text-white">
+                  {report.device_name} ({report.frequency_hz} Hz)
+                </span>
+              </div>
+            </div>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-            <div className="md:col-span-2 overflow-x-auto">
-              <table className="w-full text-left text-xs border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-                <thead className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase text-[10px]">
+          {/* Sensory Neuropathy Summary Banner */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <span className="text-[10px] uppercase font-bold text-slate-400">Mean Great Toe VPT</span>
+              <div className="text-2xl font-black text-cyan-600 mt-1">
+                {report.mean_vpt_v ? `${report.mean_vpt_v} V` : '—'}
+              </div>
+              <p className="text-[10px] text-slate-400 mt-0.5">Hallux reference site</p>
+            </div>
+
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <span className="text-[10px] uppercase font-bold text-slate-400">Sensory Classification</span>
+              <div
+                className={`text-base font-black mt-2 ${
+                  report.overall_classification === 'SEVERE_LOPS'
+                    ? 'text-rose-600'
+                    : report.overall_classification === 'MODERATE_NEUROPATHY'
+                    ? 'text-orange-500'
+                    : report.overall_classification === 'MILD_BLUNTING'
+                    ? 'text-amber-500'
+                    : 'text-emerald-600'
+                }`}
+              >
+                {report.overall_classification.replace(/_/g, ' ')}
+              </div>
+              <p className="text-[10px] text-slate-400 mt-0.5">International QST Standard</p>
+            </div>
+
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <span className="text-[10px] uppercase font-bold text-slate-400">Diabetic Foot Ulcer Risk</span>
+              <div
+                className={`text-base font-black mt-2 ${
+                  report.ulcer_risk_category === 'CRITICAL'
+                    ? 'text-rose-600'
+                    : report.ulcer_risk_category === 'HIGH'
+                    ? 'text-orange-500'
+                    : 'text-emerald-600'
+                }`}
+              >
+                {report.ulcer_risk_category} RISK
+              </div>
+              <p className="text-[10px] text-slate-400 mt-0.5">Asymmetry: {report.bilateral_asymmetry_v} V</p>
+            </div>
+          </div>
+
+          {/* Triplicate Measurements Table */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              Standardized Anatomical Site Trial Records
+            </h3>
+
+            <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 uppercase text-[10px]">
                   <tr>
-                    <th className="px-4 py-2.5">Metric</th>
-                    <th className="px-4 py-2.5">Patient Value</th>
-                    <th className="px-4 py-2.5">Clinical Consensus Target</th>
+                    <th className="px-4 py-3">Anatomical Site</th>
+                    <th className="px-4 py-3 font-mono">Trial 1 (V)</th>
+                    <th className="px-4 py-3 font-mono">Trial 2 (V)</th>
+                    <th className="px-4 py-3 font-mono">Trial 3 (V)</th>
+                    <th className="px-4 py-3 font-mono">Mean ± SD</th>
+                    <th className="px-4 py-3 font-mono">Normative Expected</th>
+                    <th className="px-4 py-3 font-mono">Z-Score</th>
+                    <th className="px-4 py-3">Classification</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  <tr>
-                    <td className="px-4 py-2.5 font-medium">Time in Range (TIR: 70–180 mg/dL)</td>
-                    <td className="px-4 py-2.5 font-bold text-emerald-600">{s.time_in_range_percent}%</td>
-                    <td className="px-4 py-2.5 text-slate-500">&gt; 70% of readings</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-2.5 font-medium">Time Below Range (TBR: &lt;70 mg/dL)</td>
-                    <td className="px-4 py-2.5 font-bold text-rose-600">{s.time_below_range_percent}%</td>
-                    <td className="px-4 py-2.5 text-slate-500">&lt; 4% (&lt;1% for Level 2)</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-2.5 font-medium">Time Above Range (TAR: &gt;180 mg/dL)</td>
-                    <td className="px-4 py-2.5 font-bold text-amber-600">{s.time_above_range_percent}%</td>
-                    <td className="px-4 py-2.5 text-slate-500">&lt; 25%</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-2.5 font-medium">Mean Interstitial Glucose</td>
-                    <td className="px-4 py-2.5 font-bold text-slate-900 dark:text-white">{s.mean_glucose} mg/dL</td>
-                    <td className="px-4 py-2.5 text-slate-500">Optimal: 90–130 mg/dL</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-2.5 font-medium">Glucose Management Indicator (GMI)</td>
-                    <td className="px-4 py-2.5 font-bold text-teal-600">{s.glucose_management_indicator}%</td>
-                    <td className="px-4 py-2.5 text-slate-500">&lt; 7.0% (individualized)</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-2.5 font-medium">Glycemic Variability (%CV)</td>
-                    <td className="px-4 py-2.5 font-bold text-slate-900 dark:text-white">{s.glycemic_variability_cv}%</td>
-                    <td className="px-4 py-2.5 text-slate-500">≤ 36% (stable baseline)</td>
-                  </tr>
+                  {report.measurements.map((m, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
+                      <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">
+                        {m.site}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-300">
+                        {m.trial_1_v} V
+                      </td>
+                      <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-300">
+                        {m.trial_2_v} V
+                      </td>
+                      <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-300">
+                        {m.trial_3_v} V
+                      </td>
+                      <td className="px-4 py-3 font-mono font-bold text-cyan-600">
+                        {m.mean_vpt_v} ± {m.sd_vpt_v} V
+                      </td>
+                      <td className="px-4 py-3 font-mono text-slate-500">
+                        {m.normative_expected_v} V
+                      </td>
+                      <td className="px-4 py-3 font-mono font-bold">
+                        {m.z_score > 0 ? `+${m.z_score}` : m.z_score}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                          {m.loss_grade.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
-
-            <div className="flex flex-col items-center">
-              <TimeInRangeDonut
-                inRange={s.time_in_range_percent}
-                belowRange={s.time_below_range_percent}
-                aboveRange={s.time_above_range_percent}
-                height={180}
-              />
-            </div>
           </div>
-        </div>
 
-        {/* Latest Machine Learning Risk Assessment */}
-        {report.latest_risk_assessment && (
-          <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <BrainCircuit className="w-4 h-4 text-teal-600" />
-                Integrated Machine Learning Diabetes Risk Profile
-              </span>
-              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300">
-                {report.latest_risk_assessment.risk_category} RISK ({report.latest_risk_assessment.risk_percentage}%)
-              </span>
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
-              {report.latest_risk_assessment.clinical_summary}
+          {/* Clinical Interpretation & Podiatric Advice */}
+          <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 space-y-2">
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+              Clinical Interpretation & Podiatric Triage:
+            </span>
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              {report.clinical_notes}
             </p>
           </div>
-        )}
 
-        {/* Automated Clinical Notes */}
-        <div className="space-y-2">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-            Automated Clinical Impressions
-          </h3>
-          <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
-            {report.clinical_notes}
+          {/* Investigator Sign-off */}
+          <div className="pt-6 border-t border-slate-200 dark:border-slate-800 grid grid-cols-2 gap-8 text-xs">
+            <div>
+              <p className="text-slate-400 mb-8">Principal Investigator Sign-off:</p>
+              <div className="border-b border-slate-400 w-48 mb-1" />
+              <p className="font-bold text-slate-800 dark:text-white">Prof. Elena Rostova, MD, PhD</p>
+              <p className="text-slate-500 text-[10px]">Metabolic Neurology Research Unit</p>
+            </div>
+
+            <div className="text-right">
+              <p className="text-slate-400 mb-8">Clinical Center Verification:</p>
+              <div className="border-b border-slate-400 w-48 ml-auto mb-1" />
+              <p className="font-bold text-slate-800 dark:text-white">QST Lab Accreditation #ISO-13485</p>
+              <p className="text-slate-500 text-[10px]">Automated Electronic Record</p>
+            </div>
+          </div>
+
+          {/* Regulatory Disclaimer */}
+          <p className="text-[10px] text-slate-400 text-center pt-4 border-t border-slate-100 dark:border-slate-800">
+            {report.disclaimer}
           </p>
         </div>
-
-        {/* Mandatory Medical Safety Disclaimer */}
-        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs text-amber-900 dark:text-amber-200 space-y-1">
-          <p className="font-bold flex items-center gap-1.5">
-            <Info className="w-4 h-4 text-amber-600 shrink-0" />
-            Medical Disclaimer &amp; Verification Protocol
-          </p>
-          <p>{report.disclaimer}</p>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

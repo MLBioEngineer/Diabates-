@@ -1,4 +1,20 @@
-import { User, TelemetryReading, TelemetryStatistics, RiskPredictionResult, HealthAlert, HealthReport, DoctorPatientSummary } from './types';
+/**
+ * VPT Sense AI - Frontend API Client
+ * Vibration Perception Threshold (VPT) & Quantitative Sensory Testing Platform
+ */
+
+import {
+  User,
+  Participant,
+  ParticipantDetail,
+  LiveDeviceState,
+  VPTEstimationInput,
+  VPTEstimationOutput,
+  CohortAnalytics,
+  ResearchReport,
+  DeviceSettings,
+  VPTAlert,
+} from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
 
@@ -30,7 +46,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   return response.json();
 }
 
+// -------------------------------------------------------------
 // Authentication
+// -------------------------------------------------------------
 export async function loginUser(email: string, password: string) {
   const data = await request<{ access_token: string; role: string; user_id: string; full_name: string }>('/auth/login', {
     method: 'POST',
@@ -45,7 +63,7 @@ export async function loginUser(email: string, password: string) {
   return data;
 }
 
-export async function registerUser(email: string, password: string, full_name: string, role: string = 'PATIENT') {
+export async function registerUser(email: string, password: string, full_name: string, role: string = 'RESEARCHER') {
   const data = await request<{ access_token: string; role: string; user_id: string; full_name: string }>('/auth/register', {
     method: 'POST',
     body: JSON.stringify({ email, password, full_name, role }),
@@ -72,69 +90,136 @@ export function logoutUser() {
   }
 }
 
-// Machine Learning
-export async function predictDiabetesRisk(payload: {
-  pregnancies: number;
-  glucose: number;
-  blood_pressure: number;
-  skin_thickness: number;
-  insulin: number;
-  bmi: number;
-  diabetes_pedigree_function: number;
-  age: number;
-}): Promise<RiskPredictionResult> {
-  return request<RiskPredictionResult>('/ml/predict-risk', {
+// -------------------------------------------------------------
+// 1. VPT Reference Estimation
+// -------------------------------------------------------------
+export async function estimateVPTReference(payload: VPTEstimationInput): Promise<VPTEstimationOutput> {
+  return request<VPTEstimationOutput>('/vpt/estimate-reference', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
 }
 
-export async function getModelInfo(): Promise<any> {
-  return request<any>('/ml/model-info');
+// -------------------------------------------------------------
+// 2. Live Device Monitoring & Simulation
+// -------------------------------------------------------------
+export async function getLiveDeviceState(): Promise<LiveDeviceState> {
+  return request<LiveDeviceState>('/vpt/device/state');
 }
 
-// Telemetry
-export async function getTelemetryHistory(hours: number = 24): Promise<TelemetryReading[]> {
-  return request<TelemetryReading[]>(`/telemetry/history?hours=${hours}`);
+export async function startDeviceRamp(): Promise<LiveDeviceState> {
+  return request<LiveDeviceState>('/vpt/device/start-ramp', { method: 'POST' });
 }
 
-export async function getTelemetryStatistics(hours: number = 24): Promise<TelemetryStatistics> {
-  return request<TelemetryStatistics>(`/telemetry/statistics?hours=${hours}`);
+export async function stepDeviceSimulation(deltaTimeSec: number = 0.25): Promise<LiveDeviceState> {
+  return request<LiveDeviceState>(`/vpt/device/step?delta_time_sec=${deltaTimeSec}`, { method: 'POST' });
 }
 
-export async function triggerSimulatedReading(eventOverride?: string): Promise<TelemetryReading> {
-  const q = eventOverride ? `?event_override=${eventOverride}` : '';
-  return request<TelemetryReading>(`/telemetry/simulate-stream${q}`, { method: 'POST' });
+export async function triggerPerception(): Promise<LiveDeviceState> {
+  return request<LiveDeviceState>('/vpt/device/trigger-perception', { method: 'POST' });
 }
 
-export async function seedSampleHistory(hours: number = 24) {
-  return request<any>(`/telemetry/seed-sample-history?hours=${hours}`, { method: 'POST' });
+export async function advanceNextTrial(nextSite?: string): Promise<LiveDeviceState> {
+  const q = nextSite ? `?next_site=${nextSite}` : '';
+  return request<LiveDeviceState>(`/vpt/device/next-trial${q}`, { method: 'POST' });
 }
 
-// Alerts
-export async function getActiveAlerts(): Promise<HealthAlert[]> {
-  return request<HealthAlert[]>('/alerts/active');
+export async function resetDevice(): Promise<LiveDeviceState> {
+  return request<LiveDeviceState>('/vpt/device/reset', { method: 'POST' });
 }
 
-export async function acknowledgeAlert(alertId: string): Promise<HealthAlert> {
-  return request<HealthAlert>(`/alerts/${alertId}/ack`, { method: 'POST' });
+export async function configureDevice(payload: {
+  frequency_hz: number;
+  ramp_rate: number;
+  site: string;
+  simulated_patient_neuropathy_level: string;
+}): Promise<LiveDeviceState> {
+  return request<LiveDeviceState>('/vpt/device/configure', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
-// Reports
-export async function getHealthReport(): Promise<HealthReport> {
-  return request<HealthReport>('/reports/summary');
+// -------------------------------------------------------------
+// 3. Participant Management
+// -------------------------------------------------------------
+export async function getParticipants(search?: string, group?: string): Promise<Participant[]> {
+  const params = new URLSearchParams();
+  if (search) params.append('search', search);
+  if (group) params.append('group', group);
+  const q = params.toString() ? `?${params.toString()}` : '';
+  return request<Participant[]>(`/vpt/participants${q}`);
+}
+
+export async function createParticipant(payload: {
+  full_name: string;
+  age: number;
+  gender: string;
+  height_cm: number;
+  weight_kg: number;
+  clinical_group: string;
+  diabetes_duration_years: number;
+  foot_ulcer_history: boolean;
+  symptoms_nss_score: number;
+  notes?: string;
+}): Promise<any> {
+  return request<any>('/vpt/participants', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getParticipantDetail(id: string): Promise<ParticipantDetail> {
+  return request<ParticipantDetail>(`/vpt/participants/${id}`);
+}
+
+export async function recordQSTSession(participantId: string, payload: any): Promise<any> {
+  return request<any>(`/vpt/participants/${participantId}/sessions`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// -------------------------------------------------------------
+// 4. VPT Analytics
+// -------------------------------------------------------------
+export async function getAnalyticsOverview(): Promise<CohortAnalytics> {
+  return request<CohortAnalytics>('/vpt/analytics/overview');
+}
+
+// -------------------------------------------------------------
+// 5. Research Reports & Export
+// -------------------------------------------------------------
+export async function getResearchReport(participantId?: string): Promise<ResearchReport> {
+  const q = participantId ? `?participant_id=${participantId}` : '';
+  return request<ResearchReport>(`/vpt/reports/summary${q}`);
 }
 
 export function getExportCsvUrl(): string {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : '';
-  return `${API_BASE}/reports/export-csv`;
+  return `${API_BASE}/vpt/reports/export-csv`;
 }
 
-// Doctor Dashboard
-export async function getDoctorPatientRoster(): Promise<DoctorPatientSummary[]> {
-  return request<DoctorPatientSummary[]>('/doctor/patients');
+// -------------------------------------------------------------
+// 6. Device Settings
+// -------------------------------------------------------------
+export async function getDeviceSettings(): Promise<DeviceSettings> {
+  return request<DeviceSettings>('/vpt/device-settings');
 }
 
-export async function getPatientClinicalDetails(patientId: string): Promise<any> {
-  return request<any>(`/doctor/patients/${patientId}/details`);
+export async function updateDeviceSettings(payload: Partial<DeviceSettings>): Promise<any> {
+  return request<any>('/vpt/device-settings', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+// -------------------------------------------------------------
+// 7. Alerts
+// -------------------------------------------------------------
+export async function getVPTAlerts(): Promise<VPTAlert[]> {
+  return request<VPTAlert[]>('/vpt/alerts');
+}
+
+export async function acknowledgeVPTAlert(alertId: string): Promise<any> {
+  return request<any>(`/vpt/alerts/${alertId}/ack`, { method: 'POST' });
 }

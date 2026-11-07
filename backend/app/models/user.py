@@ -16,11 +16,10 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False)
-    role = Column(String(50), default="PATIENT", nullable=False) # "PATIENT", "DOCTOR", "ADMIN"
+    role = Column(String(50), default="RESEARCHER", nullable=False) # "RESEARCHER", "PARTICIPANT", "ADMIN", "DOCTOR", "PATIENT"
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     # Relationships
-    patient_profile = relationship("PatientProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
-    doctor_profile = relationship("DoctorProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    participant_profile = relationship("Participant", back_populates="user", uselist=False, cascade="all, delete-orphan")

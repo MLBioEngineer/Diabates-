@@ -12,8 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.core.config import settings
 from backend.app.core.database import get_db
 from backend.app.models.user import User
-from backend.app.models.patient import PatientProfile
-from backend.app.models.doctor import DoctorProfile
+from backend.app.models.vpt_domain import Participant
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 
@@ -46,36 +45,26 @@ async def get_current_user(
     return user
 
 
-async def get_current_patient_profile(
+async def get_current_participant_profile(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
-) -> PatientProfile:
-    query = select(PatientProfile).where(PatientProfile.user_id == current_user.id)
+) -> Participant:
+    query = select(Participant).where(Participant.user_id == current_user.id)
     result = await db.execute(query)
     profile = result.scalars().first()
     
     if not profile:
-        # Auto-create if missing for user
-        profile = PatientProfile(user_id=current_user.id)
-        db.add(profile)
-        await db.commit()
-        await db.refresh(profile)
-    return profile
-
-
-async def get_current_doctor(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-) -> DoctorProfile:
-    if current_user.role not in ["DOCTOR", "ADMIN"]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access restricted to clinicians only")
-    
-    query = select(DoctorProfile).where(DoctorProfile.user_id == current_user.id)
-    result = await db.execute(query)
-    profile = result.scalars().first()
-    
-    if not profile:
-        profile = DoctorProfile(user_id=current_user.id)
+        profile = Participant(
+            user_id=current_user.id,
+            subject_code=f"SUB-{current_user.id[:6].upper()}",
+            full_name=current_user.full_name,
+            age=45,
+            gender="FEMALE",
+            height_cm=165.0,
+            weight_kg=68.0,
+            bmi=25.0,
+            clinical_group="DIABETIC_NON_NEUROPATHIC",
+        )
         db.add(profile)
         await db.commit()
         await db.refresh(profile)

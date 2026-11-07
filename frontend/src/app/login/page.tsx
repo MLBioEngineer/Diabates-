@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { loginUser } from '@/lib/api';
-import { Activity, Lock, Mail, AlertCircle, Stethoscope, User } from 'lucide-react';
+import { Lock, Mail, AlertCircle, ShieldCheck, User } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,12 +19,8 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const data = await loginUser(email, password);
-      if (data.role === 'DOCTOR') {
-        router.push('/doctor');
-      } else {
-        router.push('/dashboard');
-      }
+      await loginUser(email, password);
+      router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
@@ -32,13 +28,13 @@ export default function LoginPage() {
     }
   };
 
-  const fillDemoAccount = (role: 'PATIENT' | 'DOCTOR') => {
-    if (role === 'PATIENT') {
-      setEmail('patient@demo.com');
-      setPassword('patient123');
+  const fillDemoAccount = (role: 'RESEARCHER' | 'PARTICIPANT') => {
+    if (role === 'RESEARCHER') {
+      setEmail('researcher@vptsense.ai');
+      setPassword('researcher123');
     } else {
-      setEmail('doctor@demo.com');
-      setPassword('doctor123');
+      setEmail('subject@vptsense.ai');
+      setPassword('subject123');
     }
   };
 
@@ -46,34 +42,34 @@ export default function LoginPage() {
     <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl">
         <div className="text-center space-y-2">
-          <div className="inline-flex w-12 h-12 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 items-center justify-center shadow-md">
-            <Activity className="w-6 h-6" />
+          <div className="inline-flex w-12 h-12 rounded-xl bg-cyan-50 dark:bg-cyan-950/60 text-cyan-600 items-center justify-center shadow-md font-black text-lg">
+            VPT
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Sign In to GlycoPulse AI</h2>
-          <p className="text-xs text-slate-500">Access personalized telemetry and diabetes risk insights</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Sign In to VPT Sense AI</h2>
+          <p className="text-xs text-slate-500">Access quantitative sensory testing trials and research cohorts</p>
         </div>
 
         {/* Demo Fast-Login Pills */}
         <div className="space-y-2">
           <p className="text-[11px] font-semibold text-slate-400 text-center uppercase tracking-wider">
-            Quick Demo Auto-Fill:
+            Quick Fast-Fill:
           </p>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => fillDemoAccount('PATIENT')}
-              className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-lg bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 transition-colors"
+              onClick={() => fillDemoAccount('RESEARCHER')}
+              className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-lg bg-cyan-50 text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 hover:bg-cyan-100 transition-colors"
             >
-              <User className="w-3.5 h-3.5" />
-              Demo Patient
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Lead Researcher
             </button>
             <button
               type="button"
-              onClick={() => fillDemoAccount('DOCTOR')}
-              className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 transition-colors"
+              onClick={() => fillDemoAccount('PARTICIPANT')}
+              className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-lg bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition-colors"
             >
-              <Stethoscope className="w-3.5 h-3.5" />
-              Demo Clinician
+              <User className="w-3.5 h-3.5" />
+              Study Participant
             </button>
           </div>
         </div>
@@ -97,8 +93,8 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                className="w-full pl-9 pr-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                placeholder="researcher@vptsense.ai"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:ring-2 focus:ring-cyan-500 focus:outline-none"
               />
             </div>
           </div>
@@ -115,7 +111,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-9 pr-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:ring-2 focus:ring-cyan-500 focus:outline-none"
               />
             </div>
           </div>
@@ -123,15 +119,15 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 focus:ring-2 focus:ring-teal-500 disabled:opacity-50 transition-all shadow-md shadow-teal-600/20"
+            className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs shadow-md shadow-cyan-600/20 transition-all disabled:opacity-50"
           >
-            {loading ? 'Authenticating...' : 'Sign In'}
+            {loading ? 'Authenticating...' : 'Sign In to Portal'}
           </button>
         </form>
 
         <div className="text-center text-xs text-slate-500">
-          Don't have an account?{' '}
-          <Link href="/register" className="font-semibold text-teal-600 hover:text-teal-700">
+          <span>Need an investigator account? </span>
+          <Link href="/register" className="font-bold text-cyan-600 hover:text-cyan-700">
             Register here
           </Link>
         </div>

@@ -1,99 +1,202 @@
-export type DataProvenance = 'SIMULATED' | 'DEXCOM_G7' | 'ABBOTT_FREESTYLE' | 'MANUAL';
+/**
+ * VPT Sense AI - TypeScript Type Definitions
+ * Vibration Perception Threshold (VPT) & Quantitative Sensory Testing Platform
+ */
 
 export interface User {
   id: string;
   email: string;
   full_name: string;
-  role: 'PATIENT' | 'DOCTOR' | 'ADMIN';
+  role: 'RESEARCHER' | 'PARTICIPANT' | 'ADMIN' | 'DOCTOR' | 'PATIENT';
   is_active: boolean;
   created_at: string;
 }
 
-export interface TelemetryReading {
+export type ClinicalGroup =
+  | 'HEALTHY_CONTROL'
+  | 'DIABETIC_NON_NEUROPATHIC'
+  | 'ESTABLISHED_DPN'
+  | 'CIPN'
+  | 'OTHER';
+
+export type SensoryClassification =
+  | 'PRESERVED'
+  | 'MILD_BLUNTING'
+  | 'MODERATE_NEUROPATHY'
+  | 'SEVERE_LOPS'
+  | 'REFERENCE_ONLY'
+  | 'NOT_TESTED';
+
+export type UlcerRiskCategory = 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
+
+export interface Participant {
   id: string;
-  patient_id: string;
-  recorded_at: string;
-  glucose_mg_dl: number;
-  glucose_trend_velocity: number;
-  heart_rate_bpm?: number;
-  blood_pressure_systolic?: number;
-  blood_pressure_diastolic?: number;
-  body_temperature_c?: number;
-  spo2_percentage?: number;
-  physical_activity_steps: number;
-  provenance: DataProvenance;
+  subject_code: string;
+  full_name: string;
+  age: number;
+  gender: string;
+  height_cm: number;
+  weight_kg: number;
+  bmi: number;
+  clinical_group: ClinicalGroup;
+  diabetes_duration_years: number;
+  foot_ulcer_history: boolean;
+  symptoms_nss_score: number;
+  notes?: string;
+  latest_vpt_voltage?: number;
+  latest_classification?: SensoryClassification;
+  ulcer_risk_category?: UlcerRiskCategory;
+  sessions_count?: number;
+  created_at: string;
 }
 
-export interface TelemetryStatistics {
-  time_in_range_percent: number;
-  time_below_range_percent: number;
-  time_above_range_percent: number;
-  mean_glucose: number;
-  glucose_management_indicator: number;
-  glycemic_variability_cv: number;
-  readings_count: number;
-  latest_reading?: TelemetryReading;
+export interface VPTMeasurement {
+  site: string;
+  trial_1_v: number;
+  trial_2_v: number;
+  trial_3_v: number;
+  mean_vpt_v: number;
+  sd_vpt_v: number;
+  normative_expected_v: number;
+  z_score: number;
+  percentile: number;
+  loss_grade: SensoryClassification;
 }
 
-export interface SHAPContribution {
-  feature: string;
+export interface VPTSession {
+  id: string;
+  tested_at: string;
+  device_name: string;
+  frequency_hz: number;
+  mean_great_toe_v?: number;
+  max_site_voltage_v?: number;
+  bilateral_asymmetry_v: number;
+  overall_classification: SensoryClassification;
+  ulcer_risk_category: UlcerRiskCategory;
+  clinical_summary?: string;
+  measurements: VPTMeasurement[];
+}
+
+export interface ParticipantDetail extends Participant {
+  sessions: VPTSession[];
+}
+
+export interface LiveDeviceState {
+  device_id: string;
+  device_name: string;
+  status: 'READY' | 'RAMPING' | 'THRESHOLD_CAPTURED' | 'SAFETY_STOP' | 'PAUSED';
+  active_site: string;
+  current_voltage_v: number;
+  frequency_hz: number;
+  ramp_rate_v_per_sec: number;
+  contact_force_g: number;
+  probe_contact_ok: boolean;
+  trial_number: number;
+  max_trials: number;
+  captured_trials: number[];
+  mean_voltage_v?: number;
+  subject_button_pressed: boolean;
+  timestamp: string;
+}
+
+export interface FeatureImpact {
+  feature_name: string;
   feature_label: string;
-  feature_value: number;
-  shap_value: number;
-  impact_direction: 'INCREASES_RISK' | 'DECREASES_RISK';
-  impact_percentage: number;
+  feature_value: string;
+  voltage_impact_v: number;
+  description: str;
 }
 
-export interface RiskPredictionResult {
-  id?: string;
-  patient_id?: string;
-  model_name: string;
-  risk_score: number;
-  risk_percentage: number;
-  risk_category: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
-  clinical_summary: string;
+export interface VPTEstimationInput {
+  age: number;
+  gender: string;
+  height_cm: number;
+  weight_kg: number;
+  anatomical_site: string;
+  measured_vpt_v?: number;
+}
+
+export interface VPTEstimationOutput {
+  expected_mean_vpt_v: number;
+  upper_limit_normal_95_v: number;
+  lower_limit_normal_5_v: number;
+  standard_deviation_v: number;
+  measured_vpt_v?: number;
+  z_score?: number;
+  percentile_rank?: number;
+  sensory_classification: SensoryClassification;
+  ulceration_risk_multiplier: number;
+  ulcer_risk_category: UlcerRiskCategory;
+  feature_impacts: FeatureImpact[];
+  clinical_interpretation: string;
+  research_recommendation: string;
   disclaimer: string;
-  shap_contributions: SHAPContribution[];
-  created_at: string;
 }
 
-export interface HealthAlert {
-  id: string;
-  patient_id: string;
-  created_at: string;
-  alert_level: 'INFO' | 'WARNING' | 'CRITICAL';
-  metric_type: string;
-  metric_value: number;
-  message: string;
-  threshold_rule: string;
-  is_acknowledged: boolean;
-  acknowledged_at?: string;
+export interface CohortAnalytics {
+  total_subjects: number;
+  total_sessions: number;
+  mean_cohort_vpt_v: number;
+  mean_bilateral_asymmetry_v: number;
+  classification_breakdown: { name: string; value: number; color: string }[];
+  site_comparison: { site: string; voltage_v: number }[];
+  age_regression_scatter: {
+    subject_code: string;
+    age: number;
+    measured_vpt: number;
+    normative_ref: number;
+    group: string;
+  }[];
 }
 
-export interface HealthReport {
+export interface ResearchReport {
   report_id: string;
   generated_at: string;
-  patient_name: string;
-  patient_id: string;
-  diabetes_type: string;
-  monitoring_period: string;
-  telemetry_statistics: TelemetryStatistics;
-  latest_risk_assessment?: RiskPredictionResult;
-  recent_readings_sample: TelemetryReading[];
-  recent_alerts: HealthAlert[];
+  subject_code: string;
+  full_name: string;
+  age: number;
+  gender: string;
+  height_cm: number;
+  weight_kg: number;
+  bmi: number;
+  clinical_group: string;
+  diabetes_duration_years: number;
+  foot_ulcer_history: boolean;
+  symptoms_nss_score: number;
+  tested_at?: string;
+  device_name: string;
+  frequency_hz: number;
+  mean_vpt_v?: number;
+  max_site_voltage_v?: number;
+  bilateral_asymmetry_v: number;
+  overall_classification: SensoryClassification;
+  ulcer_risk_category: UlcerRiskCategory;
   clinical_notes: string;
+  measurements: VPTMeasurement[];
   disclaimer: string;
 }
 
-export interface DoctorPatientSummary {
-  patient_id: string;
-  full_name: string;
-  email: string;
-  diabetes_type: string;
-  latest_glucose?: number;
-  latest_reading_time?: string;
-  risk_score?: number;
-  risk_category: string;
-  time_in_range_percent: number;
-  active_alerts_count: number;
+export interface DeviceSettings {
+  id?: string;
+  device_name: string;
+  serial_number: string;
+  port_mode: string;
+  frequency_hz: number;
+  ramp_rate_v_per_sec: number;
+  max_voltage_safety_v: number;
+  contact_force_target_g: number;
+  calibration_status: string;
+  is_active: boolean;
+}
+
+export interface VPTAlert {
+  id: string;
+  participant_id: string;
+  created_at: string;
+  alert_level: 'INFO' | 'WARNING' | 'CRITICAL';
+  alert_type: string;
+  metric_value: number;
+  site?: string;
+  message: string;
+  is_acknowledged: boolean;
 }
